@@ -1,0 +1,207 @@
+﻿@page
+@model QnSchool.Pages.Subjects.DetailsModel
+
+@{
+    ViewData["Title"] = "Details";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+    await Html.RenderPartialAsync("Modals/CapNhatDiemModal");
+    await Html.RenderPartialAsync("Modals/XoaHocSinhModal");
+}
+<div id="alertContainer"></div>
+<h1>Chi Tiết Môn Học</h1>
+
+<div>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject.Name)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject.Name)
+        </dd>
+    </dl>
+    <h5>Danh Sách Học Sinh</h5>
+    <table data-toggle="table" 
+           data-header-style="headerStyle"
+           data-pagination="true"
+           data-page-size="5"
+           data-height="460"
+           data-search="true"
+           data-click-to-select="true">
+        <thead>
+            <tr>
+                <th data-field="stt" data-align="center">STT</th>
+                <th data-field="name" >Họ Tên</th>
+                <th data-field="email">Email</th>
+                <th data-field="averange" data-align="center">Điểm trung bình</th>
+                <th data-field="action" data-width="150" data-align="center">Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var item in Model.Subject.StudentSubjects.Select((subject, index) =>(subject, index))){
+            <tr>
+                <td>@(item.index + 1)</td>
+                <td>@item.subject.Student.UserName</td>
+                <td>@item.subject.Student.Email</td>
+                <td>@item.subject.averange</td>
+                <td>
+                        <button class="btn btn-secondary" onclick="openChinhSuaHocSinhModal('@item.subject.StudentId', '@Model.Subject.Id', '@item.subject.Student.UserName', '@item.subject.averange')">Sửa</button>
+                        <button class="btn btn-danger" onclick="openXoaHocSinhModal('@item.subject.StudentId', '@Model.Subject.Id', '@item.subject.Student.UserName', '@item.subject.averange')">Xóa</button>
+                </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div>
+    @if (User.IsInRole("admin"))
+    {
+        <a asp-page="./Edit" asp-route-id="@Model.Subject.Id">Edit</a>
+    }
+    
+    <a asp-page="./DanhSachMonHoc">Back to List</a>
+</div>
+
+<script>
+    const studentSubjectUri = "/api/StudentSubjects";
+    function validateAverange() {
+        let averangeValue = document.getElementById("averange").value;
+        let validationMessage = document.getElementById("validationMessage");
+        if (averangeValue < 0 || averangeValue > 10) {
+            validationMessage.textContent = "Vui lòng nhập điểm trong khoảng từ 0 đến 10";
+        } else {
+            validationMessage.textContent = "";
+        }
+    }
+
+    function headerStyle(column) {
+        return {
+            stt: {
+                css: { background: 'blue', color: "white" },
+            },
+            name: {
+                css: { background: 'blue', color: "white" }
+            },
+            averange: {
+                css: { background: 'blue', color: "white" }
+            },
+            email: {
+                css: { background: 'blue', color: "white" }
+            },
+            action: {
+                css: { background: 'blue', color: "white" }
+            }
+        }[column.field]
+    }
+
+    function openChinhSuaHocSinhModal(studentId, subjectId, studentName, averange) {
+        document.getElementById("studentName").value = studentName;
+        document.getElementById("averange").value = averange;
+        document.getElementById("StudentId").value = studentId;
+        document.getElementById("SubjectId").value = subjectId;
+        $('#CapNhatDiemModal').modal('show');
+    }
+
+    function closeChinhSuaHocSinhModal() {
+        $('#CapNhatDiemModal').modal('hide');
+    }
+
+    function openXoaHocSinhModal(studentId, subjectId, studentName, averange) {
+        document.getElementById("studentDeleteName").value = studentName;
+        document.getElementById("averangeDelete").value = averange;
+        document.getElementById("StudentDeleteId").value = studentId;
+        document.getElementById("SubjectDeleteId").value = subjectId;
+        $('#XoaHocSinhModal').modal('show');
+    }
+
+    function closeXoaHocSinhModal() {
+        $('#XoaHocSinhModal').modal('hide');
+    }
+
+    function capNhatDiemTrungBinh(event) {
+        event.preventDefault();
+        let studentSubject = {
+            "StudentId": document.getElementById("StudentId").value,
+            "SubjectId": document.getElementById("SubjectId").value,
+            "averange": document.getElementById("averange").value
+        }
+        console.log(22222, studentSubject)
+        fetch(`${studentSubjectUri}`, {
+            method: 'PUT',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(studentSubject)
+        }).then(response => {
+            if (response.status == 200) {
+                let alert = `<div class="alert alert-success alert-dismissible fade show" role = "alert" id="successAlert">
+                                               Cập nhật thành công! <button type = "button" class="btn-close" data-bs-dismiss="alert" aria - label="Close" ></button></div>`;
+                closeChinhSuaHocSinhModal();
+                document.getElementById('alertContainer').innerHTML = alert;
+                setTimeout(function () {
+                    if (document.getElementById('successAlert') != null) {
+                        document.getElementById('successAlert').remove();
+                    }
+                    location.reload();
+                }, 3000);
+            }
+            if (response.status == 404) {
+                let alert = `<div class="alert alert-success alert-dismissible fade show" role = "alert" id="successAlert">
+                                                   Không tìm được học sinh tương ứng! <button type = "button" class="btn-close" data-bs-dismiss="alert" aria - label="Close" ></button></div>`;
+                closeChinhSuaHocSinhModal();
+                document.getElementById('alertContainer').innerHTML = alert;
+                setTimeout(function () {
+                    if (document.getElementById('successAlert') != null) {
+                        document.getElementById('successAlert').remove();
+                    }
+                }, 3000);
+            }
+        }).catch(err => console.log('Cập nhật thất bại!', err))
+    }
+    function xoaHocSinh(event) {
+        event.preventDefault();
+        let studentSubject = {
+            "StudentId": document.getElementById("StudentDeleteId").value,
+            "SubjectId": document.getElementById("SubjectDeleteId").value,
+            "averange": document.getElementById("averangeDelete").value
+        }
+        console.log(22222, studentSubject)
+        fetch(`${studentSubjectUri}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(studentSubject)
+        }).then(response => {
+            if (response.status == 204) {
+                let alert = `<div class="alert alert-success alert-dismissible fade show" role = "alert" id="successAlert">
+                                                       Xóa thành công! <button type = "button" class="btn-close" data-bs-dismiss="alert" aria - label="Close" ></button></div>`;
+                closeXoaHocSinhModal();
+                document.getElementById('alertContainer').innerHTML = alert;
+                setTimeout(function () {
+                    if (document.getElementById('successAlert') != null) {
+                        document.getElementById('successAlert').remove();
+                    }
+                    location.reload();
+                }, 3000);
+            }
+            if (response.status == 404) {
+                let alert = `<div class="alert alert-success alert-dismissible fade show" role = "alert" id="successAlert">
+                                                           Không tìm được học sinh tương ứng! <button type = "button" class="btn-close" data-bs-dismiss="alert" aria - label="Close" ></button></div>`;
+                closeXoaHocSinhModal();
+                document.getElementById('alertContainer').innerHTML = alert;
+                setTimeout(function () {
+                    if (document.getElementById('successAlert') != null) {
+                        document.getElementById('successAlert').remove();
+                    }
+                }, 3000);
+            }
+        }).catch(err => console.log('Xóa thất bại!', err))
+    }
+</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

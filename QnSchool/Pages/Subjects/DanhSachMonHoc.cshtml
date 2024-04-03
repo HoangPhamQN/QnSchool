@@ -1,0 +1,195 @@
+﻿@page
+@model QnSchool.Pages.Subjects.DanhSachMonHocModel
+@inject Microsoft.AspNetCore.Identity.UserManager<QnSchool.Areas.Identity.Data.User> UserManager
+
+@{
+    var user = await UserManager.GetUserAsync(User);
+    ViewData["Title"] = "Danh sach mon hoc";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+@if (User.IsInRole("GVCN"))
+{
+    <button class="btn btn-primary" onclick="openDangKyDayModal()">Đăng ký dạy</button>
+    await Html.RenderPartialAsync("Modals/DangKyDayModal");
+} else
+{
+    <button class="btn btn-primary" onclick="openDangKyHocModal()">Đăng ký Học</button>
+    await Html.RenderPartialAsync("Modals/DangKyHocModal");
+}
+
+@* @{
+    await Html.RenderPartialAsync("Modals/DangKyDayModal");
+    await Html.RenderPartialAsync("Modals/DangKyHocModal");
+} *@
+<div id="alertContainer"></div>
+<h1>Danh Sách Môn Học Của Bạn</h1>
+<input type="hidden" id="userId" value="@user.Id"/>
+<table data-toggle="table" 
+       data-search="true"
+       data-click-to-select="true"
+       data-height="460"
+       data-pagination="true"
+       data-page-size="2"
+       data-header-style="headerStyle">
+   
+    <thead>
+        <tr>
+            <th data-width="10" data-field="stt">STT</th>
+            <th data-field="name">Tên môn học</th>
+            @{
+                if (User.IsInRole("HS"))
+                {
+                                <th data-width="30" data-field="averange">Điểm trung bình</th>
+                } else
+                {
+                                <th data-width="300" data-field="action" data-align="center">Hành động</th>
+                }
+            }     
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var subject in Model.Subject.Select((subject, index) => (subject, index)))
+        {
+            <tr>
+                <td>@(subject.index + 1)</td>
+                <td>@subject.subject.Name</td>
+                @if (User.IsInRole("HS"))
+                {
+                    <td>@subject.subject.StudentSubjects.FirstOrDefault().averange</td>
+                } else
+                {
+                    <td>
+                       <a asp-area="" asp-page="./Details" asp-route-id="@(subject.subject.Id)" class="btn btn-secondary">Chi tiết</a>
+                        
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+   
+}
+
+<script>
+    
+</script>
+
+<script>
+    const teacherSubjectUri = "/api/TeacherSubjects";
+    const studentSubjectUri = "/api/StudentSubjects";
+    function headerStyle(column) {
+        return {
+            stt: {
+                css: { background: 'blue', color: "white" },
+            },
+            name: {
+                css: { background: 'blue', color: "white" }
+            },
+            averange: {
+                css: { background: 'blue', color: "white" }
+            },
+            action: {
+                css: { background: 'blue', color: "white" }
+            }
+        }[column.field]
+    }
+    function openDangKyDayModal() {
+        $('#exampleModal').modal('show');
+    }
+    function closeDangKyDayModal(){
+        $('#exampleModal').modal('hide');
+    }
+    function dangKyDay(event) {
+        event.preventDefault()
+        const teacherSubject = {
+            "TeacherId": document.getElementById("userId").value,
+            "SubjectId": document.getElementById("subjectId").value
+        };
+        fetch(`${teacherSubjectUri}`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(teacherSubject)
+        }).then(response => {
+            if (response.status == 201) {
+                let alert = `<div class="alert alert-success alert-dismissible fade show" role = "alert" id="successAlert">
+                                       Đăng ký dạy thành công! <button type = "button" class="btn-close" data-bs-dismiss="alert" aria - label="Close" ></button></div>`;
+                closeDangKyDayModal();
+                document.getElementById('alertContainer').innerHTML = alert;
+                setTimeout(function () {
+                    if (document.getElementById('successAlert') != null) {
+                        document.getElementById('successAlert').remove();
+                    }
+                    location.reload();
+                }, 3000);
+            }
+            if (response.status == 409) {
+                let alert = `<div class="alert alert-success alert-dismissible fade show" role = "alert" id="successAlert">
+                                           Môn học này đã được bạn đăng ký trước đó! <button type = "button" class="btn-close" data-bs-dismiss="alert" aria - label="Close" ></button></div>`;
+                closeDangKyDayModal();
+                document.getElementById('alertContainer').innerHTML = alert;
+                setTimeout(function () {
+                    if (document.getElementById('successAlert') != null) {
+                        document.getElementById('successAlert').remove();
+                    }
+                }, 3000);
+            }
+        }).catch(err => console.log('Đăng ký dạy thất bại!', err))
+    }
+
+        function openDangKyHocModal() {
+            $('#DangKyHocModal').modal('show');
+        }
+        function closeDangKyHocModal() {
+            $('#DangKyHocModal').modal('hide');
+        }
+        function dangKyHoc(event) {
+            event.preventDefault()
+            const studentSubject = {
+                "StudentId": document.getElementById("userId").value,
+                "SubjectId": document.getElementById("subjectId").value
+            };
+            fetch(`${studentSubjectUri}`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(studentSubject)
+            }).then(response => {
+                console.log(111, response, response.status)
+                if (response.status == 201) {
+                    let alert = `<div class="alert alert-success alert-dismissible fade show" role = "alert" id="successAlert">
+                                       Đăng ký học thành công! <button type = "button" class="btn-close" data-bs-dismiss="alert" aria - label="Close" ></button></div>`;
+                    closeDangKyHocModal();
+                    document.getElementById('alertContainer').innerHTML = alert;
+                    setTimeout(function () {
+                        if (document.getElementById('successAlert') != null) {
+                        document.getElementById('successAlert').remove();
+                        }
+                        location.reload();
+                    }, 3000);
+                }
+                if (response.status == 409) {
+                    let alert = `<div class="alert alert-success alert-dismissible fade show" role = "alert" id="successAlert">
+                                           Môn học này đã được bạn đăng ký trước đó! <button type = "button" class="btn-close" data-bs-dismiss="alert" aria - label="Close" ></button></div>`;
+                    closeDangKyHocModal();
+                    document.getElementById('alertContainer').innerHTML = alert;
+                    setTimeout(function () {
+                    if (document.getElementById('successAlert') != null) {
+                        document.getElementById('successAlert').remove();
+                    }
+                    }, 3000);
+                }
+            }).catch(err => console.log('Đăng ký học thất bại!', err))
+    }
+</script>
+
+
+
